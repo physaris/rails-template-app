@@ -4,12 +4,11 @@ gsub_file "Gemfile", /https:\/\/rubygems.org/, "http://ruby.taobao.org"
 
 gem 'rails-i18n'
 gem 'devise'
-gem 'activeadmin', github: 'gregbell/active_admin', branch: 'rails4'
+gem 'activeadmin', github: 'gregbell/active_admin'
 gem 'rolify'
 gem 'cancan'
 
-gem 'bootstrap-sass'
-gem 'bootswatch-rails'
+gem 'anjlab-bootstrap-rails', '~> 3.0.0.3', :require => 'bootstrap-rails'
 
 gem_group :development do
   gem 'hirb-unicode'
@@ -26,10 +25,18 @@ run "rm config/locales/en.yml"
 run "cp #{File.dirname(__FILE__)}/zh-CN.yml config/locales/"
 
 generate "devise:install"
+generate "devise:views"
 gsub_file "config/initializers/devise.rb", /config.sign_out_via\ =\ :delete/, "config.sign_out_via = :delete, :get"
 
 generate "devise User"
 generate "active_admin:install User --skip-users"
+
+run "mv app/assets/stylesheets/application.css app/assets/stylesheets/application.css.scss"
+inject_into_file 'app/assets/stylesheets/application.css.scss', after: " */" do <<-'CSS'
+
+@import "twitter/bootstrap";
+CSS
+end
 
 run "mv app/assets/stylesheets/active_admin.css.scss vendor/assets/stylesheets"
 run "mv app/assets/javascripts/active_admin.js.coffee vendor/assets/javascripts"
@@ -65,7 +72,7 @@ end
 generate "controller", "welcome index --skip-javascripts --skip-stylesheets --skip-helper"
 gsub_file "config/routes.rb", /get\ "welcome\/index"/, "root to: 'welcome#index'"
 
-rake "db:migrate"
+#rake "db:migrate"
 
 =begin
 git :init
