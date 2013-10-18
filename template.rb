@@ -2,6 +2,7 @@
 
 
 run "rm README.rdoc"
+run "rm public/index.html"
 
 # 使用国内镜像
 gsub_file "Gemfile", /https:\/\/rubygems.org/, "http://ruby.taobao.org"
@@ -9,7 +10,7 @@ gsub_file "Gemfile", /https:\/\/rubygems.org/, "http://ruby.taobao.org"
 # 一些基本GEM
 gem 'rails-i18n'
 gem 'devise'
-gem 'activeadmin', github: 'gregbell/active_admin'
+gem 'activeadmin'#, github: 'gregbell/active_admin'
 gem 'rolify'
 gem 'cancan'
 
@@ -56,7 +57,7 @@ end
 
 # 将后台资源移至vendor目录以避免样式表冲突
 run "mv app/assets/stylesheets/active_admin.css.scss vendor/assets/stylesheets"
-run "mv app/assets/javascripts/active_admin.js.coffee vendor/assets/javascripts"
+run "mv app/assets/javascripts/active_admin.js vendor/assets/javascripts"
 
 # 复制devise本地化翻译
 run "rm config/locales/devise.en.yml"
@@ -75,7 +76,7 @@ gsub_file "config/initializers/active_admin.rb", /config.authentication_method\ 
 gsub_file "config/initializers/active_admin.rb", /config.current_user_method\ =\ :current_user/, 
   "config.current_user_method = :current_admin_user"
 
-inject_into_file 'app/controllers/application_controller.rb', after: "protect_from_forgery with: :exception" do <<-'RUBY'
+inject_into_file 'app/controllers/application_controller.rb', after: "protect_from_forgery" do <<-'RUBY'
 
   def authenticate_admin_user!
     authenticate_user!
@@ -98,11 +99,12 @@ gsub_file "config/routes.rb", /get\ "welcome\/index"/, "root to: 'welcome#index'
 
 #rake "db:migrate"
 
-=begin
+#begin
 git :init
 git :add => '.'
 git :commit => "-a -m 'initial commit'"
-=end
+#end
+
 =begin
 gem 'carrierwave'
 gem 'spreadsheet'
