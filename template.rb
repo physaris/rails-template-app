@@ -1,6 +1,5 @@
 #coding:utf-8
 
-
 run "rm README.rdoc"
 run "rm public/index.html"
 
@@ -10,15 +9,16 @@ gsub_file "Gemfile", /https:\/\/rubygems.org/, "http://ruby.taobao.org"
 # 一些基本GEM
 gem 'rails-i18n'
 gem 'devise'
-gem 'activeadmin'#, github: 'gregbell/active_admin'
+gem 'jquery-ui-rails'
+gem 'activeadmin'
 gem 'rolify'
 gem 'cancan'
 
-#gem 'anjlab-bootstrap-rails', '~> 3.0.0.3', :require => 'bootstrap-rails'
 gem 'simple_form'
 
 gem_group :development do
   gem 'hirb-unicode'
+  gem 'better_errors'
 end
 
 # 优先从本地安装
@@ -33,6 +33,10 @@ application "config.encoding = 'utf-8'"
 run "rm config/locales/en.yml"
 run "cp #{File.dirname(__FILE__)}/zh-CN.yml config/locales/"
 
+generate "simple_form:install"
+
+# TODO: config/locales/simple_form.en.yml
+
 # 安装devise，并生成本地VIEW COPY
 generate "devise:install"
 generate "devise:views"
@@ -45,19 +49,31 @@ generate "devise User"
 
 # 后台安装，并且跳过生成Admin User
 generate "active_admin:install User --skip-users"
-
-=begin
-run "mv app/assets/stylesheets/application.css app/assets/stylesheets/application.css.scss"
-inject_into_file 'app/assets/stylesheets/application.css.scss', after: " */" do <<-'CSS'
-
-@import "twitter/bootstrap";
-CSS
-end
-=end
+gsub_file "config/initializers/active_admin.rb", /config.authentication_method\ =\ :authenticate_user!/, 
+  "config.authentication_method = :authenticate_admin_user!"
+gsub_file "config/initializers/active_admin.rb", /#\ config.site_title_link\ =\ \"\/\"/,
+  "config.site_title_link = \"/\""
 
 # 将后台资源移至vendor目录以避免样式表冲突
+run "rm app/assets/javascripts/active_admin.js"
 run "mv app/assets/stylesheets/active_admin.css.scss vendor/assets/stylesheets"
-run "mv app/assets/javascripts/active_admin.js vendor/assets/javascripts"
+
+# 修正active_admin 找不到jquery ui的问题
+run "cp #{File.dirname(__FILE__)}/active_admin.js vendor/assets/javascripts"
+
+# js中包含jquery ui
+inject_into_file 'app/assets/javascripts/application.js', after: "\/\/= require jquery_ujs" do <<-'CODE'
+
+//= require jquery.ui.all
+CODE
+end
+
+# css中包含jquery ui
+inject_into_file 'app/assets/stylesheets/application.css', after: " *= require_self" do <<-'CODE'
+
+ *= require jquery.ui.all
+CODE
+end
 
 # 复制devise本地化翻译
 run "rm config/locales/devise.en.yml"
@@ -69,14 +85,15 @@ generate "rolify:role Role User"
 # 安装cancan
 generate "cancan:ability"
 
+generate "active_admin:resource User"
+generate "active_admin:resource Role"
+
 
 # 后台识别管理员方法
 gsub_file "config/initializers/active_admin.rb", /config.authentication_method\ =\ :authenticate_user!/, 
   "config.authentication_method = :authenticate_admin_user!"
-gsub_file "config/initializers/active_admin.rb", /config.current_user_method\ =\ :current_user/, 
-  "config.current_user_method = :current_admin_user"
 
-inject_into_file 'app/controllers/application_controller.rb', after: "protect_from_forgery" do <<-'RUBY'
+inject_into_file 'app/controllers/application_controller.rb', after: "protect_from_forgery" do <<-'CODE'
 
   def authenticate_admin_user!
     authenticate_user!
@@ -90,12 +107,26 @@ inject_into_file 'app/controllers/application_controller.rb', after: "protect_fr
     return nil if user_signed_in? && !current_user.has_role?(:admin)
     current_user
   end
-RUBY
+CODE
 end
 
 # 生成默认首页
 generate "controller", "welcome index --skip-javascripts --skip-stylesheets --skip-helper"
 gsub_file "config/routes.rb", /get\ "welcome\/index"/, "root to: 'welcome#index'"
+
+# 在layout中增加一些基本链接
+inject_into_file 'app/views/layouts/application.html.erb', after: "<body>" do <<-'CODE'
+
+  <% if current_user %>
+    <%= link_to "后台", admin_root_path %> |
+    <%= link_to('退出', destroy_user_session_path, :method => :delete) %> |
+    <%= link_to('修改密码', edit_registration_path(:user)) %>
+  <% else %>
+    <%= link_to('注册', new_registration_path(:user)) %> |
+    <%= link_to('登录', new_session_path(:user)) %>
+  <% end %>
+CODE
+end
 
 #rake "db:migrate"
 
@@ -104,6 +135,7 @@ git :init
 git :add => '.'
 git :commit => "-a -m 'initial commit'"
 #end
+
 
 =begin
 gem 'carrierwave'
@@ -120,4 +152,18 @@ gem_group :development do
   gem 'rack-mini-profiler'
   gem 'bullet'
 end
+
+run "mv app/assets/stylesheets/application.css app/assets/stylesheets/application.css.scss"
+inject_into_file 'app/assets/stylesheets/application.css.scss', after: " */" do <<-'CSS'
+
+@import "twitter/bootstrap";
+CSS
+end
+
+
+=end
+=begin
+# 使用脚手架时避免生成不必要的文件
+--skip-test-unit
+--skip-javascripts --skip-stylesheets --skip-helper
 =end
