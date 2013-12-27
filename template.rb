@@ -1,7 +1,7 @@
 #coding:utf-8
 
-run "rm README.rdoc"
-run "rm public/index.html"
+run "rm -f README.rdoc"
+#run "rm -f public/index.html"
 
 # 使用国内镜像
 gsub_file "Gemfile", /https:\/\/rubygems.org/, "http://ruby.taobao.org"
@@ -10,7 +10,8 @@ gsub_file "Gemfile", /https:\/\/rubygems.org/, "http://ruby.taobao.org"
 gem 'rails-i18n'
 gem 'devise'
 gem 'jquery-ui-rails'
-gem 'activeadmin'
+#gem 'activeadmin'
+gem 'activeadmin', github: 'gregbell/active_admin'
 gem 'rolify'
 gem 'cancan'
 
@@ -19,6 +20,8 @@ gem 'simple_form'
 gem_group :development do
   gem 'hirb-unicode'
   gem 'better_errors'
+  gem 'binding_of_caller'
+  gem 'pry'
 end
 
 # 优先从本地安装
@@ -28,6 +31,7 @@ run "bundle install --local"
 application "config.time_zone = 'Asia/Shanghai'"
 application "config.i18n.default_locale = 'zh-CN'"
 application "config.encoding = 'utf-8'"
+application "I18n.config.enforce_available_locales = false"
 
 # 本地化翻译文件
 run "rm config/locales/en.yml"
@@ -55,11 +59,11 @@ gsub_file "config/initializers/active_admin.rb", /#\ config.site_title_link\ =\ 
   "config.site_title_link = \"/\""
 
 # 将后台资源移至vendor目录以避免样式表冲突
-run "rm app/assets/javascripts/active_admin.js"
+run "mv app/assets/javascripts/active_admin.js.coffee vendor/assets/javascripts"
 run "mv app/assets/stylesheets/active_admin.css.scss vendor/assets/stylesheets"
 
 # 修正active_admin 找不到jquery ui的问题
-run "cp #{File.dirname(__FILE__)}/active_admin.js vendor/assets/javascripts"
+#run "cp #{File.dirname(__FILE__)}/active_admin.js vendor/assets/javascripts"
 
 # js中包含jquery ui
 inject_into_file 'app/assets/javascripts/application.js', after: "\/\/= require jquery_ujs" do <<-'CODE'
@@ -88,12 +92,11 @@ generate "cancan:ability"
 generate "active_admin:resource User"
 generate "active_admin:resource Role"
 
-
 # 后台识别管理员方法
 gsub_file "config/initializers/active_admin.rb", /config.authentication_method\ =\ :authenticate_user!/, 
   "config.authentication_method = :authenticate_admin_user!"
 
-inject_into_file 'app/controllers/application_controller.rb', after: "protect_from_forgery" do <<-'CODE'
+inject_into_file 'app/controllers/application_controller.rb', after: "protect_from_forgery with: :exception" do <<-'CODE'
 
   def authenticate_admin_user!
     authenticate_user!
@@ -117,53 +120,21 @@ gsub_file "config/routes.rb", /get\ "welcome\/index"/, "root to: 'welcome#index'
 # 在layout中增加一些基本链接
 inject_into_file 'app/views/layouts/application.html.erb', after: "<body>" do <<-'CODE'
 
+  <%= link_to("首页", root_path) %> |
   <% if current_user %>
-    <%= link_to "后台", admin_root_path %> |
+    <%= link_to("后台", admin_root_path) %> |
     <%= link_to('退出', destroy_user_session_path, :method => :delete) %> |
     <%= link_to('修改密码', edit_registration_path(:user)) %>
   <% else %>
     <%= link_to('注册', new_registration_path(:user)) %> |
     <%= link_to('登录', new_session_path(:user)) %>
   <% end %>
+  <br />
 CODE
 end
 
-#rake "db:migrate"
+rake "db:migrate"
 
-#begin
 git :init
 git :add => '.'
 git :commit => "-a -m 'initial commit'"
-#end
-
-
-=begin
-gem 'carrierwave'
-gem 'spreadsheet'
-gem 'animate-rails'
-gem 'rabl'
-gem 'oj'
-
-gem_group :development do
-  gem 'better_errors'
-  gem 'meta_request'
-  gem 'hirb-unicode'
-  gem 'binding_of_caller'
-  gem 'rack-mini-profiler'
-  gem 'bullet'
-end
-
-run "mv app/assets/stylesheets/application.css app/assets/stylesheets/application.css.scss"
-inject_into_file 'app/assets/stylesheets/application.css.scss', after: " */" do <<-'CSS'
-
-@import "twitter/bootstrap";
-CSS
-end
-
-
-=end
-=begin
-# 使用脚手架时避免生成不必要的文件
---skip-test-unit
---skip-javascripts --skip-stylesheets --skip-helper
-=end
