@@ -11,6 +11,7 @@ gem 'rails-i18n'
 gem 'devise'
 gem 'jquery-ui-rails'
 #gem 'activeadmin'
+gem 'inherited_resources', github: 'josevalim/inherited_resources'
 gem 'activeadmin', github: 'gregbell/active_admin'
 gem 'rolify'
 gem 'cancan'
@@ -22,6 +23,7 @@ gem_group :development do
   gem 'better_errors'
   gem 'binding_of_caller'
   gem 'pry'
+  gem 'pry-debugger'
 end
 
 # 优先从本地安装
